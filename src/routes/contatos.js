@@ -1,9 +1,9 @@
 const express = require('express')
 const router = express.Router()
-
-let contatos = []
+const db = require('../database')
 
 router.get('/', (req, res) => {
+    const contatos = db.prepare('SELECT * FROM contatos').all()
     res.json(contatos)
 })
 
@@ -16,49 +16,40 @@ router.post('/', (req, res) => {
         })
     }
 
-    const novoContato = {
-        id: Date.now(),
-        nome,
-        email,
-        telefone
-    }
+    const result = db.prepare(
+        'INSERT INTO contatos (nome, email, telefone) VALUES (?, ?, ?)'
+    ).run(nome, email, telefone)
 
-    contatos.push(novoContato)
-    res.status(201).json(novoContato)
+    res.status(201).json({ id: result.lastInsertRowid, nome, email, telefone })
 })
 
 router.put('/:id', (req, res) => {
     const { id } = req.params
     const { nome, email, telefone } = req.body
 
-    const contato = contatos.find(c => c.id === Number(id))
-    
+    const contato = db.prepare('SELECT * FROM contatos WHERE id = ?').get(id)
+
     if (!contato) {
-        return res.status(404).json({ 
-            erro: 'Contato não encontrado!' 
-        })
+        return res.status(404).json({ erro: 'Contato não encontrado!' })
     }
 
-    contatos = contatos.map(c =>
-        c.id === Number(id)
-        ? { ...c, nome, email, telefone }
-        : c
-    )
+    db.prepare(
+        'UPDATE contatos SET nome = ?, email = ?, telefone = ? WHERE id = ?'
+    ).run(nome, email, telefone, id)
+
     res.json({ mensagem: 'Contato atualizado!' })
 })
 
 router.delete('/:id', (req, res) => {
     const { id } = req.params
 
-    const contato = contatos.find(c => c.id === Number(id))
+    const contato = db.prepare('SELECT * FROM contatos WHERE id = ?').get(id)
 
     if (!contato) {
-        return res.status(404).json({ 
-            erro: 'Contato não encontrado!' 
-        })
+        return res.status(404).json({ erro: 'Contato não encontrado!' })
     }
 
-    contatos = contatos.filter(c => c.id !== Number(id))
+    db.prepare('DELETE FROM contatos WHERE id = ?').run(id)
     res.json({ mensagem: 'Contato deletado!' })
 })
 
