@@ -1,13 +1,24 @@
-const Database = require('better-sqlite3')
+const { Pool } = require('pg')
+require('dotenv').config()
 
-const db = new Database('contatos.db')
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' 
+        ? { rejectUnauthorized: false } 
+        : false
+})
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS contatos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        email TEXT NOT NULL,
-        telefone TEXT NOT NULL
-    )
-`)
-module.exports = db
+const init = async () => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS contatos (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL,
+            telefone TEXT NOT NULL
+        )
+    `)
+}
+
+init()
+
+module.exports = pool
